@@ -1,91 +1,110 @@
-import { type NextRequest, NextResponse } from "next/server"
+// app/api/chat/route.ts
+import { NextRequest, NextResponse } from "next/server";
+
+export const runtime = "edge"; // optional, keep if you prefer edge runtime
 
 const PORTFOLIO_CONTEXT = `
 You are Qasim's AI Assistant.
 
 Your ONLY job:
-- Help visitors learn about Qasim's portfolio, projects, skills, experience, and technologies he uses.
+- Help visitors learn about Qasim's portfolio, projects, skills, services, background, and how to contact him.
 
-STRICT RULES (MUST follow these always):
-- If the user asks anything OUTSIDE Qasim’s portfolio (example: math like "2+2", jokes, general knowledge, politics, cooking, celebrities, coding help unrelated to Qasim), DO NOT answer it.
-- Instead, ALWAYS reply politely:  
-  "I'm here only to help you explore Qasim's portfolio, skills, and projects. Please ask something related to his work."
+STRICT RULES:
+- If the user asks anything OUTSIDE Qasim’s portfolio (math, jokes, general knowledge, politics, cooking, celebrities, unrelated coding help), DO NOT answer it.
+- Instead reply: "I'm here only to help you explore Qasim's portfolio, skills, and projects. Please ask something related to his work."
 
-- Do NOT create or guess any new facts about Qasim.
-- Do NOT answer questions unrelated to Qasim.
-- Keep every reply short, friendly, and helpful.
+- Do NOT invent facts.
+- Keep replies short, friendly, and helpful.
 
-Allowed Topics (ONLY these):
-- Qasim’s skills  
-- Qasim’s experience  
-- Qasim’s projects  
-- Qasim’s technologies  
-- Qasim’s background  
-- Qasim’s portfolio info  
-- How Qasim built something  
-- Qasim’s services  
+Allowed Topics:
+- Qasim’s skills, experience, projects, services, contact info, technologies, education, certifications.
+`;
 
-About Qasim:
-- Full Stack Developer with expertise in Next.js, TypeScript, React, and modern web technologies.
-- Certified in AI, Metaverse, and Web 3.0.
-- Passionate about building innovative solutions using cutting-edge technologies.
-- Experienced with database design, API development, and cloud deployment.
-- Interested in AI applications and emerging technologies.
-
-Skills:
-- Frontend: React, Next.js, TypeScript, Tailwind CSS, Framer Motion
-- Backend: Node.js, Express, API design, REST/GraphQL
-- Databases: PostgreSQL, MongoDB, Supabase, Firebase
-- Tools: Git, Docker, Vercel, AWS, Web3 technologies
-- AI/ML: Machine Learning basics, AI integrations, Prompt Engineering
-
-Tone:
-- Friendly and concise.
-- ALWAYS redirect politely when the question is not about Qasim.
-`
-
-export async function POST(request: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
-    const { messages } = await request.json()
+    const { messages } = await req.json();
 
     if (!process.env.OPENAI_API_KEY) {
-      return NextResponse.json({ error: "API key not configured" }, { status: 500 })
+      return NextResponse.json({ error: "API key not configured" }, { status: 500 });
     }
 
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    if (!Array.isArray(messages)) {
+      return NextResponse.json({ error: "Invalid request: messages must be an array" }, { status: 400 });
+    }
+
+    // keep last N messages to reduce token cost
+    const MAX_HISTORY = 8;
+    const trimmed = messages.slice(-MAX_HISTORY).map((m: any) => ({
+      role: m.role === "assistant" ? "assistant" : "user",
+      content: m.content,
+    }));
+
+    const input = [
+      { role: "system", content: PORTFOLIO_CONTEXT },
+      ...trimmed,
+    ];
+
+    const headers: Record<string,string> = {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+    };
+    if (process.env.OPENAI_PROJECT_ID) {
+      headers["OpenAI-Project"] = process.env.OPENAI_PROJECT_ID;
+    }
+
+    const resp = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-      },
+      headers,
       body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content: PORTFOLIO_CONTEXT,
-          },
-          ...messages,
-        ],
+        model: "gpt-4.1-mini",
+        input,                    // array of messages (system + trimmed conversation)
         temperature: 0.2,
-        max_tokens: 500,
+        max_output_tokens: 500,
+        // NO 'conversation' or unsupported fields here
       }),
-    })
+    });
 
-    if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.status}`)
+    if (!resp.ok) {
+      const text = await resp.text();
+      console.error("OpenAI responses error:", resp.status, text);
+      throw new Error(`OpenAI API error: ${resp.status}`);
     }
 
-    const data = await response.json()
-    const message = data.choices[0]?.message?.content
+    const data = await resp.json();
 
-    if (!message) {
-      throw new Error("No response from OpenAI")
+    // Safe extraction of the assistant text:
+    let messageText = "";
+
+    if (typeof data.output_text === "string" && data.output_text.trim()) {
+      messageText = data.output_text;
+    } else if (Array.isArray(data.output) && data.output.length > 0) {
+      // Try to gather textual pieces
+      messageText = data.output
+        .map((o: any) => {
+          if (typeof o === "string") return o;
+          // 'content' can be array or string
+          if (o.content) {
+            if (typeof o.content === "string") return o.content;
+            if (Array.isArray(o.content)) {
+              return o.content.map((c: any) => (c?.text ?? c?.value ?? "")).join("");
+            }
+          }
+          return o.text ?? "";
+        })
+        .join("\n")
+        .trim();
+    } else if (data.output && data.output_text) {
+      messageText = data.output_text;
     }
 
-    return NextResponse.json({ message })
-  } catch (error) {
-    console.error("[v0] Chat API error:", error)
-    return NextResponse.json({ error: "Failed to process chat request" }, { status: 500 })
+    if (!messageText) {
+      // final fallback: include a short JSON for debugging (trimmed)
+      messageText = (typeof data === "object") ? JSON.stringify(data).slice(0, 2000) : String(data);
+    }
+
+    return NextResponse.json({ message: messageText }, { status: 200, headers: { "Cache-Control": "no-store" } });
+  } catch (err) {
+    console.error("[v0] Chat API error:", err);
+    return NextResponse.json({ error: "Failed to process chat request" }, { status: 500 });
   }
 }

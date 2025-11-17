@@ -10,12 +10,14 @@ export default function Home() {
   return (
     <main className="overflow-x-hidden">
       <Navigation />
-      <Hero />
-      <About />
-      <Projects />
-      <Skills />
-      <Contact />
-      <Footer />
+      <div className="pt-16">
+        <Hero />
+        <About />
+        <Projects />
+        <Skills />
+        <Contact />
+        <Footer />
+      </div>
     </main>
   )
 }

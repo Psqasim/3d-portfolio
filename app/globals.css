@@ -41,39 +41,39 @@
 }
 
 .dark {
-  /* Dark mode colors */
-  --background: oklch(0.12 0 0);
-  --foreground: oklch(0.95 0 0);
-  --card: oklch(0.18 0.02 273);
-  --card-foreground: oklch(0.95 0 0);
-  --popover: oklch(0.15 0 0);
-  --popover-foreground: oklch(0.95 0 0);
-  --primary: oklch(0.55 0.16 195);
-  --primary-foreground: oklch(0.12 0 0);
-  --secondary: oklch(0.4 0.1 200);
-  --secondary-foreground: oklch(0.95 0 0);
-  --muted: oklch(0.28 0 0);
-  --muted-foreground: oklch(0.7 0 0);
-  --accent: oklch(0.6 0.18 195);
-  --accent-foreground: oklch(0.12 0 0);
+  /* Improved dark mode colors for better contrast and clarity */
+  --background: oklch(0.1 0 0);
+  --foreground: oklch(0.98 0 0);
+  --card: oklch(0.16 0.02 273);
+  --card-foreground: oklch(0.98 0 0);
+  --popover: oklch(0.14 0 0);
+  --popover-foreground: oklch(0.98 0 0);
+  --primary: oklch(0.58 0.18 195);
+  --primary-foreground: oklch(0.1 0 0);
+  --secondary: oklch(0.42 0.12 200);
+  --secondary-foreground: oklch(0.98 0 0);
+  --muted: oklch(0.32 0 0);
+  --muted-foreground: oklch(0.75 0 0);
+  --accent: oklch(0.62 0.2 195);
+  --accent-foreground: oklch(0.1 0 0);
   --destructive: oklch(0.396 0.141 25.723);
-  --destructive-foreground: oklch(0.95 0 0);
-  --border: oklch(0.25 0.01 200);
-  --input: oklch(0.22 0.01 200);
-  --ring: oklch(0.6 0.18 195);
+  --destructive-foreground: oklch(0.98 0 0);
+  --border: oklch(0.28 0.02 200);
+  --input: oklch(0.25 0.01 200);
+  --ring: oklch(0.62 0.2 195);
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.15 0 0);
-  --sidebar-foreground: oklch(0.95 0 0);
-  --sidebar-primary: oklch(0.55 0.16 195);
-  --sidebar-primary-foreground: oklch(0.12 0 0);
-  --sidebar-accent: oklch(0.6 0.18 195);
-  --sidebar-accent-foreground: oklch(0.12 0 0);
-  --sidebar-border: oklch(0.25 0.01 200);
-  --sidebar-ring: oklch(0.6 0.18 195);
+  --sidebar: oklch(0.14 0 0);
+  --sidebar-foreground: oklch(0.98 0 0);
+  --sidebar-primary: oklch(0.58 0.18 195);
+  --sidebar-primary-foreground: oklch(0.1 0 0);
+  --sidebar-accent: oklch(0.62 0.2 195);
+  --sidebar-accent-foreground: oklch(0.1 0 0);
+  --sidebar-border: oklch(0.28 0.02 200);
+  --sidebar-ring: oklch(0.62 0.2 195);
 }
 
 @theme inline {
@@ -120,10 +120,21 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    /* Add smooth color transitions for theme changes */
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
   }
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Add safe area support for mobile notches and home indicators */
+.safe-area-top {
+  padding-top: max(1rem, env(safe-area-inset-top));
+}
+
+.safe-area-bottom {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
 }
 
 /* Add smooth scrolling and scrollbar styling */
@@ -137,27 +148,31 @@ html {
 
 ::-webkit-scrollbar-track {
   background: var(--background);
+  transition: background 0.3s ease;
 }
 
 ::-webkit-scrollbar-thumb {
   background: var(--primary);
   border-radius: 5px;
+  transition: background 0.3s ease;
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--accent);
 }
 
-/* Add glassmorphism effect */
+/* Enhanced glassmorphism effect with better dark mode support */
 .glass {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  transition: all 0.3s ease;
 }
 
 .dark .glass {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 /* Add gradient text */
@@ -175,4 +190,58 @@ html {
 
 .animation-delay-200 {
   animation-delay: 200ms;
+}
+
+/* Added smooth transitions for mobile menu animations */
+@media (max-width: 768px) {
+  [role="presentation"] {
+    animation: fadeIn 0.2s ease-in-out;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Enhanced chat widget styling - removed glass effect and improved opaque design */
+.chat-widget {
+  @apply bg-background border border-border;
+}
+
+.chat-widget-header {
+  @apply bg-gradient-to-r from-primary/15 to-transparent border-b border-border;
+}
+
+.chat-message-assistant {
+  @apply bg-muted text-foreground border border-border shadow-sm;
+}
+
+.chat-message-user {
+  @apply bg-primary text-primary-foreground border border-primary/50 shadow-sm;
+}
+
+.chat-input {
+  @apply bg-muted text-foreground border-2 border-border focus:border-primary focus:ring-2 focus:ring-primary/50;
+}
+
+/* Dark mode specific chat styling - improved contrast */
+.dark .chat-widget {
+  @apply bg-background border-border;
+}
+
+.dark .chat-widget-header {
+  @apply bg-gradient-to-r from-primary/20 to-transparent;
+}
+
+.dark .chat-message-assistant {
+  @apply bg-card text-card-foreground border-border;
+}
+
+.dark .chat-input {
+  @apply bg-card text-foreground border-border focus:border-primary;
 }
